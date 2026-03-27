@@ -1,7 +1,8 @@
 import { execSync } from "child_process";
 import { existsSync, readdirSync } from "fs";
 import { mkdir, writeFile } from "fs/promises";
-import { join, dirname, relative } from "path";
+import { join, dirname, relative, resolve } from "path";
+import { fileURLToPath } from "url";
 import { stringify } from "yaml";
 import {
   VAPI_ENV,
@@ -10,6 +11,7 @@ import {
   RESOURCES_DIR,
   BASE_DIR,
   APPLY_FILTER,
+  BOOTSTRAP_SYNC,
 } from "./config.ts";
 import { loadState, saveState } from "./state.ts";
 import { credentialReverseMap, deepReplaceValues } from "./credentials.ts";
@@ -521,12 +523,29 @@ export interface PullStats {
   skipped: number;
 }
 
+export interface PullOptions {
+  force?: boolean;
+  bootstrap?: boolean;
+  typeFilter?: ResourceType[];
+}
+
+export interface PullResult {
+  state: StateFile;
+  stats: Record<ResourceType, PullStats>;
+  force: boolean;
+  bootstrap: boolean;
+}
+
 export async function pullResourceType(
   resourceType: ResourceType,
   state: StateFile,
-  changedFiles?: Set<string>,
-  force?: boolean,
+  options: {
+    changedFiles?: Set<string>;
+    force?: boolean;
+    bootstrap?: boolean;
+  } = {},
 ): Promise<PullStats> {
+  const { changedFiles, force, bootstrap } = options;
   console.log(`\n📥 Pulling ${resourceType}...`);
 
   const resources = (await fetchAllResources(resourceType)) ?? [];
@@ -553,13 +572,14 @@ export async function pullResourceType(
 
     if (!resourceId) {
       // Reuse an existing file's resourceId if the name matches (cross-env pull)
-      resourceId =
-        findExistingResourceId(resourceType, resource) ??
-        generateResourceId(resource);
+      resourceId = bootstrap
+        ? generateResourceId(resource)
+        : (findExistingResourceId(resourceType, resource) ??
+          generateResourceId(resource));
     }
 
     // Skip files that have been locally modified (git detection)
-    if (changedFiles) {
+    if (!bootstrap && changedFiles) {
       const folderPath = FOLDER_MAP[resourceType];
       const mdPath = join(
         "resources",
@@ -583,7 +603,7 @@ export async function pullResourceType(
 
     // Skip resources whose local file was deleted (works without git)
     // A resource that was previously tracked (in state) but has no local file = intentional deletion
-    if (!force && !isNew) {
+    if (!bootstrap && !force && !isNew) {
       const folderPath = FOLDER_MAP[resourceType];
       const dir = join(RESOURCES_DIR, folderPath);
       const fileExists =
@@ -612,17 +632,24 @@ export async function pullResourceType(
       withCredNames._platformDefault = true;
     }
 
-    // Write to file
-    const filePath = await writeResourceFile(
-      resourceType,
-      resourceId,
-      withCredNames,
-    );
-    const icon = isPlatformDefault ? "🔒" : isNew ? "✨" : "📝";
-    const relPath = relative(BASE_DIR, filePath);
-    console.log(
-      `   ${icon} ${resourceId} -> ${relPath}${isPlatformDefault ? " (platform default, read-only)" : ""}`,
-    );
+    if (bootstrap) {
+      const icon = isPlatformDefault ? "🔒" : isNew ? "✨" : "📝";
+      console.log(
+        `   ${icon} ${resourceId} -> state only${isPlatformDefault ? " (platform default, read-only)" : ""}`,
+      );
+    } else {
+      // Write to file
+      const filePath = await writeResourceFile(
+        resourceType,
+        resourceId,
+        withCredNames,
+      );
+      const icon = isPlatformDefault ? "🔒" : isNew ? "✨" : "📝";
+      const relPath = relative(BASE_DIR, filePath);
+      console.log(
+        `   ${icon} ${resourceId} -> ${relPath}${isPlatformDefault ? " (platform default, read-only)" : ""}`,
+      );
+    }
 
     if (isNew) created++;
     else updated++;
@@ -641,20 +668,25 @@ export async function pullResourceType(
 // Main Pull Engine
 // ─────────────────────────────────────────────────────────────────────────────
 
-async function main(): Promise<void> {
-  const force = process.argv.includes("--force");
-
-  const typeFilter = APPLY_FILTER.resourceTypes;
+export async function runPull(options: PullOptions = {}): Promise<PullResult> {
+  const force = options.force ?? process.argv.includes("--force");
+  const bootstrap = options.bootstrap ?? BOOTSTRAP_SYNC;
+  const typeFilter = options.typeFilter ?? APPLY_FILTER.resourceTypes;
 
   console.log(
     "═══════════════════════════════════════════════════════════════",
   );
   console.log(
-    `🔄 Vapi GitOps Pull - Environment: ${VAPI_ENV}${force ? " (force)" : ""}`,
+    `🔄 Vapi GitOps Pull - Environment: ${VAPI_ENV}${force ? " (force)" : ""}${bootstrap ? " (bootstrap)" : ""}`,
   );
   console.log(`   API: ${VAPI_BASE_URL}`);
   if (typeFilter?.length) {
     console.log(`   Filter: ${typeFilter.join(", ")}`);
+  }
+  if (bootstrap) {
+    console.log(
+      "   Mode: state sync only (remote resources are not written locally)",
+    );
   }
   console.log(
     "═══════════════════════════════════════════════════════════════",
@@ -663,7 +695,7 @@ async function main(): Promise<void> {
   // Default mode: skip locally changed files (local is source of truth)
   // Force mode: overwrite everything (platform is source of truth)
   let changedFiles: Set<string> | undefined;
-  const gitEnabled = !force && isGitRepo() && gitHasCommits();
+  const gitEnabled = !force && !bootstrap && isGitRepo() && gitHasCommits();
 
   if (gitEnabled) {
     changedFiles = getLocallyChangedFiles();
@@ -683,6 +715,10 @@ async function main(): Promise<void> {
     console.log(
       "\n⚡ Force mode: overwriting all local files with platform state",
     );
+  } else if (bootstrap) {
+    console.log(
+      "\n🧭 Bootstrap mode: refreshing state and credentials without materializing remote resources",
+    );
   }
 
   const state = loadState();
@@ -691,7 +727,7 @@ async function main(): Promise<void> {
   await pullCredentials(state);
 
   const zero: PullStats = { created: 0, updated: 0, skipped: 0 };
-  const stats: Record<string, PullStats> = {
+  const stats: Record<ResourceType, PullStats> = {
     tools: { ...zero },
     structuredOutputs: { ...zero },
     assistants: { ...zero },
@@ -709,51 +745,53 @@ async function main(): Promise<void> {
     !typeFilter?.length || typeFilter.includes(type);
 
   if (shouldPull("tools"))
-    stats.tools = await pullResourceType("tools", state, changedFiles, force);
-  if (shouldPull("assistants"))
-    stats.assistants = await pullResourceType(
-      "assistants",
-      state,
+    stats.tools = await pullResourceType("tools", state, {
       changedFiles,
       force,
-    );
+      bootstrap,
+    });
+  if (shouldPull("assistants"))
+    stats.assistants = await pullResourceType("assistants", state, {
+      changedFiles,
+      force,
+      bootstrap,
+    });
   if (shouldPull("structuredOutputs"))
     stats.structuredOutputs = await pullResourceType(
       "structuredOutputs",
       state,
-      changedFiles,
-      force,
+      { changedFiles, force, bootstrap },
     );
   if (shouldPull("squads"))
-    stats.squads = await pullResourceType("squads", state, changedFiles, force);
+    stats.squads = await pullResourceType("squads", state, {
+      changedFiles,
+      force,
+      bootstrap,
+    });
   if (shouldPull("personalities"))
-    stats.personalities = await pullResourceType(
-      "personalities",
-      state,
+    stats.personalities = await pullResourceType("personalities", state, {
       changedFiles,
       force,
-    );
+      bootstrap,
+    });
   if (shouldPull("scenarios"))
-    stats.scenarios = await pullResourceType(
-      "scenarios",
-      state,
+    stats.scenarios = await pullResourceType("scenarios", state, {
       changedFiles,
       force,
-    );
+      bootstrap,
+    });
   if (shouldPull("simulations"))
-    stats.simulations = await pullResourceType(
-      "simulations",
-      state,
+    stats.simulations = await pullResourceType("simulations", state, {
       changedFiles,
       force,
-    );
+      bootstrap,
+    });
   if (shouldPull("simulationSuites"))
-    stats.simulationSuites = await pullResourceType(
-      "simulationSuites",
-      state,
+    stats.simulationSuites = await pullResourceType("simulationSuites", state, {
       changedFiles,
       force,
-    );
+      bootstrap,
+    });
 
   await saveState(state);
 
@@ -781,13 +819,25 @@ async function main(): Promise<void> {
     console.log(`\n   ℹ️  ${totalSkipped} file(s) preserved (locally changed)`);
     console.log("   Run with --force to overwrite: npm run pull:dev:force");
   }
+
+  return { state, stats, force, bootstrap };
+}
+
+async function main(): Promise<void> {
+  await runPull();
 }
 
 // Run the pull engine
-main().catch((error) => {
-  console.error(
-    "\n❌ Pull failed:",
-    error instanceof Error ? error.message : error,
-  );
-  process.exit(1);
-});
+const isMainModule =
+  process.argv[1] !== undefined &&
+  resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+
+if (isMainModule) {
+  main().catch((error) => {
+    console.error(
+      "\n❌ Pull failed:",
+      error instanceof Error ? error.message : error,
+    );
+    process.exit(1);
+  });
+}

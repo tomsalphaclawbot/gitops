@@ -8,25 +8,27 @@ This project manages **Vapi voice agent configurations** as code. All resources 
 
 **Environment-scoped resources:** Resources live in `resources/<env>/` (e.g. `resources/dev/`, `resources/prod/`). Each environment directory is isolated — `push:dev` only touches `resources/dev/`, `push:prod` only touches `resources/prod/`. See **`docs/environment-scoped-resources.md`** for the full promotion workflow and rationale.
 
+**Template-safe first run:** In a fresh clone, prefer `npm run pull:dev:bootstrap` (or the matching env) to refresh `.vapi-state.<env>.json` and credential mappings without materializing the target org's resources into `resources/<env>/`. `push:<env>` will auto-run the same bootstrap sync when it detects empty or stale state for the resources being applied.
+
 ---
 
 ## Quick Reference
 
-| I want to...                        | What to do                                                                |
-| ----------------------------------- | ------------------------------------------------------------------------- |
-| Edit an assistant's system prompt   | Edit the markdown body in `resources/<env>/assistants/<name>.md`          |
-| Change assistant settings           | Edit the YAML frontmatter in the same `.md` file                          |
-| Add a new tool                      | Create `resources/<env>/tools/<name>.yml`                                 |
-| Add a new assistant                 | Create `resources/<env>/assistants/<name>.md`                             |
-| Create a multi-agent squad          | Create `resources/<env>/squads/<name>.yml`                                |
-| Add post-call analysis              | Create `resources/<env>/structuredOutputs/<name>.yml`                     |
-| Write test simulations              | Create files under `resources/<env>/simulations/`                         |
-| Promote resources across envs       | Copy files from `resources/dev/` to `resources/stg/` or `resources/prod/` |
-| Test webhook event delivery locally | Run `npm run mock:webhook` and tunnel with ngrok                          |
-| Push changes to Vapi                | `npm run push:dev` or `npm run push:prod`                                 |
-| Pull latest from Vapi               | `npm run pull:dev` or `npm run pull:dev:force`                            |
-| Push only one file                  | `npm run push:dev resources/dev/assistants/my-agent.md`                   |
-| Test a call                         | `npm run call:dev -- -a <assistant-name>`                                 |
+| I want to...                        | What to do                                                                    |
+| ----------------------------------- | ----------------------------------------------------------------------------- |
+| Edit an assistant's system prompt   | Edit the markdown body in `resources/<env>/assistants/<name>.md`              |
+| Change assistant settings           | Edit the YAML frontmatter in the same `.md` file                              |
+| Add a new tool                      | Create `resources/<env>/tools/<name>.yml`                                     |
+| Add a new assistant                 | Create `resources/<env>/assistants/<name>.md`                                 |
+| Create a multi-agent squad          | Create `resources/<env>/squads/<name>.yml`                                    |
+| Add post-call analysis              | Create `resources/<env>/structuredOutputs/<name>.yml`                         |
+| Write test simulations              | Create files under `resources/<env>/simulations/`                             |
+| Promote resources across envs       | Copy files from `resources/dev/` to `resources/stg/` or `resources/prod/`     |
+| Test webhook event delivery locally | Run `npm run mock:webhook` and tunnel with ngrok                              |
+| Push changes to Vapi                | `npm run push:dev` or `npm run push:prod`                                     |
+| Pull latest from Vapi               | `npm run pull:dev`, `npm run pull:dev:force`, or `npm run pull:dev:bootstrap` |
+| Push only one file                  | `npm run push:dev resources/dev/assistants/my-agent.md`                       |
+| Test a call                         | `npm run call:dev -- -a <assistant-name>`                                     |
 
 ---
 
@@ -701,6 +703,7 @@ Concrete example conversations showing expected behavior.
 # Sync
 npm run pull:dev              # Pull from Vapi (preserve local changes)
 npm run pull:dev:force        # Pull from Vapi (overwrite everything)
+npm run pull:dev:bootstrap    # Refresh state without writing remote resources locally
 npm run push:dev              # Push all local changes to Vapi
 npm run push:dev assistants   # Push only assistants
 npm run push:dev resources/dev/assistants/my-agent.md  # Push single file

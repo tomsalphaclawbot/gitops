@@ -11,6 +11,10 @@ async function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
 async function vapiGet<T>(endpoint: string, debug = false): Promise<T> {
   await sleep(REQUEST_DELAY_MS);
   const response = await fetch(`${VAPI_BASE_URL}${endpoint}`, {
@@ -19,23 +23,32 @@ async function vapiGet<T>(endpoint: string, debug = false): Promise<T> {
   if (!response.ok) {
     throw new Error(`GET ${endpoint} failed: ${response.status}`);
   }
-  const data = await response.json();
-  
-  if (debug) {
+  const data: unknown = await response.json();
+
+  if (debug && isRecord(data)) {
     console.log(`   DEBUG: Response keys: ${Object.keys(data)}`);
   }
-  
+
   // Handle paginated responses - check various wrapper formats
-  if (data && typeof data === "object" && !Array.isArray(data)) {
+  if (isRecord(data)) {
     // Try common pagination patterns: { data }, { results }, { items }, { structuredOutputs }
-    const possibleArrayKeys = ["data", "results", "items", "structuredOutputs", "assistants", "tools", "squads"];
+    const possibleArrayKeys = [
+      "data",
+      "results",
+      "items",
+      "structuredOutputs",
+      "assistants",
+      "tools",
+      "squads",
+    ];
     for (const key of possibleArrayKeys) {
-      if (Array.isArray(data[key])) {
-        return data[key] as T;
+      const wrappedValue = data[key];
+      if (Array.isArray(wrappedValue)) {
+        return wrappedValue as T;
       }
     }
   }
-  
+
   return data as T;
 }
 
@@ -58,11 +71,17 @@ interface VapiResource {
 async function main(): Promise<void> {
   const dryRun = !process.argv.includes("--force");
 
-  console.log("═══════════════════════════════════════════════════════════════");
+  console.log(
+    "═══════════════════════════════════════════════════════════════",
+  );
   console.log(`🧹 Vapi Cleanup - Environment: ${VAPI_ENV}`);
   console.log(`   API: ${VAPI_BASE_URL}`);
-  console.log(`   Mode: ${dryRun ? "🔒 DRY-RUN (use --force to delete)" : "⚠️  DELETING"}`);
-  console.log("═══════════════════════════════════════════════════════════════\n");
+  console.log(
+    `   Mode: ${dryRun ? "🔒 DRY-RUN (use --force to delete)" : "⚠️  DELETING"}`,
+  );
+  console.log(
+    "═══════════════════════════════════════════════════════════════\n",
+  );
 
   const state = loadState();
   const stateIds = new Set([
@@ -78,18 +97,47 @@ async function main(): Promise<void> {
 
   console.log(`📄 State file has ${stateIds.size} resource IDs to keep\n`);
 
-  const toDelete: { type: string; id: string; name: string; endpoint: string }[] = [];
+  const toDelete: {
+    type: string;
+    id: string;
+    name: string;
+    endpoint: string;
+  }[] = [];
 
   // Fetch and compare each resource type
   const resourceTypes = [
-    { name: "assistants", endpoint: "/assistant", deleteEndpoint: "/assistant" },
+    {
+      name: "assistants",
+      endpoint: "/assistant",
+      deleteEndpoint: "/assistant",
+    },
     { name: "tools", endpoint: "/tool", deleteEndpoint: "/tool" },
-    { name: "structured outputs", endpoint: "/structured-output", deleteEndpoint: "/structured-output" },
+    {
+      name: "structured outputs",
+      endpoint: "/structured-output",
+      deleteEndpoint: "/structured-output",
+    },
     { name: "squads", endpoint: "/squad", deleteEndpoint: "/squad" },
-    { name: "personalities", endpoint: "/eval/simulation/personality", deleteEndpoint: "/eval/simulation/personality" },
-    { name: "scenarios", endpoint: "/eval/simulation/scenario", deleteEndpoint: "/eval/simulation/scenario" },
-    { name: "simulations", endpoint: "/eval/simulation", deleteEndpoint: "/eval/simulation" },
-    { name: "simulation suites", endpoint: "/eval/simulation/suite", deleteEndpoint: "/eval/simulation/suite" },
+    {
+      name: "personalities",
+      endpoint: "/eval/simulation/personality",
+      deleteEndpoint: "/eval/simulation/personality",
+    },
+    {
+      name: "scenarios",
+      endpoint: "/eval/simulation/scenario",
+      deleteEndpoint: "/eval/simulation/scenario",
+    },
+    {
+      name: "simulations",
+      endpoint: "/eval/simulation",
+      deleteEndpoint: "/eval/simulation",
+    },
+    {
+      name: "simulation suites",
+      endpoint: "/eval/simulation/suite",
+      deleteEndpoint: "/eval/simulation/suite",
+    },
   ];
 
   for (const { name, endpoint, deleteEndpoint } of resourceTypes) {
@@ -98,16 +146,23 @@ async function main(): Promise<void> {
       // Enable debug for structured outputs to see response format
       const debug = name === "structured outputs";
       const resources = await vapiGet<VapiResource[]>(endpoint, debug);
-      
+
       if (!Array.isArray(resources)) {
-        console.log(`   ⚠️  Unexpected response format for ${name}: ${typeof resources}, keys: ${Object.keys(resources as object)}`);
+        const resourceKeys = isRecord(resources)
+          ? Object.keys(resources).join(", ")
+          : "(none)";
+        console.log(
+          `   ⚠️  Unexpected response format for ${name}: ${typeof resources}, keys: ${resourceKeys}`,
+        );
         continue;
       }
-      
+
       const orphans = resources.filter((r) => !stateIds.has(r.id));
-      
+
       if (orphans.length > 0) {
-        console.log(`   Found ${orphans.length} orphaned ${name} (${resources.length} total)`);
+        console.log(
+          `   Found ${orphans.length} orphaned ${name} (${resources.length} total)`,
+        );
         for (const r of orphans) {
           toDelete.push({
             type: name,
@@ -124,7 +179,9 @@ async function main(): Promise<void> {
     }
   }
 
-  console.log("\n═══════════════════════════════════════════════════════════════");
+  console.log(
+    "\n═══════════════════════════════════════════════════════════════",
+  );
 
   if (toDelete.length === 0) {
     console.log("✅ Nothing to delete - all resources match state file\n");
@@ -138,11 +195,15 @@ async function main(): Promise<void> {
   }
 
   if (dryRun) {
-    console.log("\n═══════════════════════════════════════════════════════════════");
+    console.log(
+      "\n═══════════════════════════════════════════════════════════════",
+    );
     console.log("🔒 DRY-RUN MODE - No resources were deleted");
     console.log("   To actually delete, run:");
     console.log(`   npm run cleanup:${VAPI_ENV} -- --force`);
-    console.log("═══════════════════════════════════════════════════════════════\n");
+    console.log(
+      "═══════════════════════════════════════════════════════════════\n",
+    );
     return;
   }
 
@@ -162,9 +223,13 @@ async function main(): Promise<void> {
     }
   }
 
-  console.log("\n═══════════════════════════════════════════════════════════════");
+  console.log(
+    "\n═══════════════════════════════════════════════════════════════",
+  );
   console.log(`✅ Cleanup complete: ${deleted} deleted, ${failed} failed`);
-  console.log("═══════════════════════════════════════════════════════════════\n");
+  console.log(
+    "═══════════════════════════════════════════════════════════════\n",
+  );
 }
 
 main().catch((error) => {

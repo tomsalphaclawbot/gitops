@@ -77,10 +77,19 @@ const VALID_TYPE_ARGS = [
   ...Object.keys(RESOURCE_PATH_MAP),
 ];
 
-function parseFlags(): { forceDelete: boolean; applyFilter: ApplyFilter } {
+function parseFlags(): {
+  forceDelete: boolean;
+  bootstrapSync: boolean;
+  applyFilter: ApplyFilter;
+} {
   const args = process.argv.slice(3);
-  const result: { forceDelete: boolean; applyFilter: ApplyFilter } = {
+  const result: {
+    forceDelete: boolean;
+    bootstrapSync: boolean;
+    applyFilter: ApplyFilter;
+  } = {
     forceDelete: args.includes("--force"),
+    bootstrapSync: args.includes("--bootstrap"),
     applyFilter: {},
   };
 
@@ -103,7 +112,12 @@ function parseFlags(): { forceDelete: boolean; applyFilter: ApplyFilter } {
     const arg = args[i];
     if (!arg) continue;
     // Skip flags and their values
-    if (arg === "--force" || arg === "--type" || arg === "-t") {
+    if (
+      arg === "--force" ||
+      arg === "--bootstrap" ||
+      arg === "--type" ||
+      arg === "-t"
+    ) {
       if (arg === "--type" || arg === "-t") i++; // skip the value too
       continue;
     }
@@ -180,8 +194,11 @@ export const BASE_DIR = join(__dirname, "..");
 
 // Parse environment, flags, and load env files
 export const VAPI_ENV = parseEnvironment();
-export const { forceDelete: FORCE_DELETE, applyFilter: APPLY_FILTER } =
-  parseFlags();
+export const {
+  forceDelete: FORCE_DELETE,
+  bootstrapSync: BOOTSTRAP_SYNC,
+  applyFilter: APPLY_FILTER,
+} = parseFlags();
 
 loadEnvFile(VAPI_ENV, BASE_DIR);
 

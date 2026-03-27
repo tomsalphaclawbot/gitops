@@ -68,15 +68,29 @@ function parseArgs(): CallConfig {
         console.error("❌ Cannot specify both -a and -s");
         process.exit(1);
       }
+      const nextArg = args[i + 1];
+      if (!nextArg) {
+        console.error("❌ Missing assistant name after -a/--assistant");
+        printUsage();
+        process.exit(1);
+      }
       resourceType = "assistant";
-      target = args[++i];
+      target = nextArg;
+      i++;
     } else if (arg === "-s" || arg === "--squad") {
       if (resourceType) {
         console.error("❌ Cannot specify both -a and -s");
         process.exit(1);
       }
+      const nextArg = args[i + 1];
+      if (!nextArg) {
+        console.error("❌ Missing squad name after -s/--squad");
+        printUsage();
+        process.exit(1);
+      }
       resourceType = "squad";
-      target = args[++i];
+      target = nextArg;
+      i++;
     }
   }
 
@@ -536,17 +550,45 @@ function handleControlMessage(
 // Audio Utilities (Stubs - require native modules)
 // ─────────────────────────────────────────────────────────────────────────────
 
+interface SpeakerInstance {
+  write: (data: Buffer) => void;
+  end: () => void;
+}
+
+type SpeakerConstructor = new (options: {
+  channels: number;
+  bitDepth: number;
+  sampleRate: number;
+}) => SpeakerInstance;
+
+interface MicrophoneAudioStream {
+  on: (
+    event: "data" | "error",
+    listener: ((data: Buffer) => void) | ((error: Error) => void),
+  ) => void;
+}
+
+interface MicrophoneInstance {
+  getAudioStream: () => MicrophoneAudioStream;
+  start: () => void;
+  stop: () => void;
+}
+
+type MicrophoneFactory = (
+  options: Record<string, string>,
+) => MicrophoneInstance;
+
 function createAudioContext(): {
   playAudio: (data: Buffer | ArrayBuffer) => void;
   close: () => void;
 } {
   // Lazy load speaker module
-  let Speaker: typeof import("speaker") | null = null;
-  let speakerInstance: InstanceType<typeof import("speaker")> | null = null;
+  let Speaker: SpeakerConstructor | null = null;
+  let speakerInstance: SpeakerInstance | null = null;
 
   try {
     // Dynamic import for optional dependency
-    Speaker = require("speaker");
+    Speaker = require("speaker") as SpeakerConstructor;
     speakerInstance = new Speaker!({
       channels: 1,
       bitDepth: 16,
@@ -577,11 +619,11 @@ function createAudioContext(): {
 function createMicrophoneStream(onData: (data: Buffer) => void): {
   stop: () => void;
 } {
-  let mic: ReturnType<typeof import("mic")> | null = null;
-  let micInstance: ReturnType<ReturnType<typeof import("mic")>> | null = null;
+  let mic: MicrophoneFactory | null = null;
+  let micInstance: MicrophoneInstance | null = null;
 
   try {
-    mic = require("mic");
+    mic = require("mic") as MicrophoneFactory;
     micInstance = mic!({
       rate: "16000",
       channels: "1",

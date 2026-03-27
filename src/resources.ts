@@ -55,7 +55,8 @@ function parseFrontmatter(content: string): {
     );
   }
 
-  const [, yamlContent, body] = match;
+  const yamlContent = match[1] ?? "";
+  const body = match[2] ?? "";
   const config = parseYaml(yamlContent) as Record<string, unknown>;
 
   return { config, body: body.trim() };

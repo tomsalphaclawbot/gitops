@@ -39,7 +39,7 @@ Manage Vapi resources via Git using YAML/Markdown as the source-of-truth.
 
 ## How to Use This Repo
 
-1. **Sync from Vapi first** using `pull` so local files reflect platform state.
+1. **Bootstrap state first** using `pull:*:bootstrap` when you need fresh platform mappings without downloading the org's resources into your working tree.
 2. **Edit declarative resources** in `resources/<env>/` (`.md` assistants, `.yml` tools/squads/etc.).
 3. **Push selectively while iterating** (resource type or file path), then run a full push before release.
 4. **Promote by environment** (`dev` -> `stg` -> `prod`) by copying files between `resources/dev/`, `resources/stg/`, and `resources/prod/`.
@@ -49,6 +49,8 @@ Use:
 - `pull` when Vapi might have changed
 - `push` for explicit deploys
 - `apply` (`pull -> merge -> push`) when you want one command for sync + deploy
+
+For template-based repos, `push` now auto-runs a bootstrap state sync when local state is missing credential mappings or contains stale IDs for the resources you're applying.
 
 ---
 
@@ -79,41 +81,57 @@ cp .env.example .env.prod
 
 ### Commands
 
-| Command                         | Description                                         |
-| ------------------------------- | --------------------------------------------------- |
-| `npm run build`                 | Type-check the codebase                             |
-| `npm run pull:dev`              | Pull platform state, preserve local changes         |
-| `npm run pull:stg`              | Pull staging state, preserve local changes          |
-| `npm run pull:dev:force`        | Pull platform state, overwrite everything           |
-| `npm run pull:stg:force`        | Pull staging state, overwrite everything            |
-| `npm run pull:prod`             | Pull from prod, preserve local changes              |
-| `npm run pull:prod:force`       | Pull from prod, overwrite everything                |
-| `npm run push:dev`              | Push local files to Vapi (dev)                      |
-| `npm run push:stg`              | Push local files to Vapi (staging)                  |
-| `npm run push:prod`             | Push local files to Vapi (prod)                     |
-| `npm run apply:dev`             | Pull → Merge → Push in one shot (dev)               |
-| `npm run apply:stg`             | Pull → Merge → Push in one shot (staging)           |
-| `npm run apply:prod`            | Pull → Merge → Push in one shot (prod)              |
-| `npm run push:dev assistants`   | Push only assistants (dev)                          |
-| `npm run push:dev tools`        | Push only tools (dev)                               |
-| `npm run call:dev -- -a <name>` | Start a WebSocket call to an assistant (dev)        |
-| `npm run call:dev -- -s <name>` | Start a WebSocket call to a squad (dev)             |
-| `npm run mock:webhook`          | Run local webhook receiver for Vapi server messages |
+| Command                         | Description                                                                |
+| ------------------------------- | -------------------------------------------------------------------------- |
+| `npm run build`                 | Type-check the codebase                                                    |
+| `npm run pull:dev`              | Pull platform state, preserve local changes                                |
+| `npm run pull:stg`              | Pull staging state, preserve local changes                                 |
+| `npm run pull:dev:force`        | Pull platform state, overwrite everything                                  |
+| `npm run pull:stg:force`        | Pull staging state, overwrite everything                                   |
+| `npm run pull:prod`             | Pull from prod, preserve local changes                                     |
+| `npm run pull:prod:force`       | Pull from prod, overwrite everything                                       |
+| `npm run pull:dev:bootstrap`    | Refresh dev state/credentials without writing remote resources locally     |
+| `npm run pull:stg:bootstrap`    | Refresh staging state/credentials without writing remote resources locally |
+| `npm run pull:prod:bootstrap`   | Refresh prod state/credentials without writing remote resources locally    |
+| `npm run push:dev`              | Push local files to Vapi (dev)                                             |
+| `npm run push:stg`              | Push local files to Vapi (staging)                                         |
+| `npm run push:prod`             | Push local files to Vapi (prod)                                            |
+| `npm run apply:dev`             | Pull → Merge → Push in one shot (dev)                                      |
+| `npm run apply:stg`             | Pull → Merge → Push in one shot (staging)                                  |
+| `npm run apply:prod`            | Pull → Merge → Push in one shot (prod)                                     |
+| `npm run push:dev assistants`   | Push only assistants (dev)                                                 |
+| `npm run push:dev tools`        | Push only tools (dev)                                                      |
+| `npm run call:dev -- -a <name>` | Start a WebSocket call to an assistant (dev)                               |
+| `npm run call:dev -- -s <name>` | Start a WebSocket call to a squad (dev)                                    |
+| `npm run mock:webhook`          | Run local webhook receiver for Vapi server messages                        |
 
 ### Basic Workflow
 
 ```bash
-# First time: pull all resources from Vapi for your target env
-npm run pull:dev:force
+# First time in a template clone: refresh only state and credentials
+npm run pull:dev:bootstrap
 
-# Commit the initial state
-git add . && git commit -m "initial pull"
-
-# Make changes to YAML/MD files under resources/
+# Add or edit only the resources you actually want under resources/dev/
 
 # Push your changes (full sync)
 npm run push:dev
 ```
+
+#### Bootstrap State Sync (Template-Safe First Run)
+
+Use bootstrap pull when you need the latest platform IDs and credential mappings but do not want the repo filled with assistants, tools, and other resources from the target Vapi org:
+
+```bash
+npm run pull:dev:bootstrap
+```
+
+This mode:
+
+- Pulls credentials into `.vapi-state.<env>.json`
+- Refreshes remote resource ID mappings in the state file
+- Leaves `resources/<env>/` untouched so your working tree stays focused on the resources you actually intend to manage
+
+If you skip this step, `push` will automatically run the same bootstrap sync when it detects empty or stale state for the resources being applied.
 
 Promotion example:
 

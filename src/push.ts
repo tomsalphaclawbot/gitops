@@ -8,6 +8,7 @@ import {
 } from "./config.ts";
 import { loadState, saveState } from "./state.ts";
 import { loadResources, loadSingleResource, FOLDER_MAP } from "./resources.ts";
+import { fetchAllResources, runPull } from "./pull.ts";
 import {
   resolveReferences,
   resolveAssistantIds,
@@ -92,11 +93,154 @@ async function upsertResourceWithStateRecovery(options: {
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+const ALL_RESOURCE_TYPES: ResourceType[] = [
+  "tools",
+  "structuredOutputs",
+  "assistants",
+  "squads",
+  "personalities",
+  "scenarios",
+  "simulations",
+  "simulationSuites",
+];
+
 function warnUnresolvedCredentials(
   resourceId: string,
   data: Record<string, unknown>,
 ): void {
   walkForCredentials(resourceId, data);
+}
+
+function collectCredentialNames(
+  obj: unknown,
+  names: Set<string> = new Set(),
+): Set<string> {
+  if (obj === null || obj === undefined || typeof obj !== "object")
+    return names;
+  if (Array.isArray(obj)) {
+    for (const item of obj) collectCredentialNames(item, names);
+    return names;
+  }
+  for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
+    if (
+      key === "credentialId" &&
+      typeof value === "string" &&
+      !UUID_REGEX.test(value)
+    ) {
+      names.add(value);
+    }
+    collectCredentialNames(value, names);
+  }
+  return names;
+}
+
+function hasAnyLoadedResources(resources: LoadedResources): boolean {
+  return ALL_RESOURCE_TYPES.some((type) => resources[type].length > 0);
+}
+
+function getTargetedResourceTypes(resources: LoadedResources): ResourceType[] {
+  return ALL_RESOURCE_TYPES.filter((type) => resources[type].length > 0);
+}
+
+function getMissingCredentialNames(
+  resources: LoadedResources,
+  state: StateFile,
+): string[] {
+  const credentialMap = credentialForwardMap(state);
+  const names = new Set<string>();
+  for (const type of ALL_RESOURCE_TYPES) {
+    for (const resource of resources[type]) {
+      collectCredentialNames(resource.data, names);
+    }
+  }
+  return [...names].filter((name) => !credentialMap.has(name));
+}
+
+async function getStaleStateMappings(
+  resources: LoadedResources,
+  state: StateFile,
+): Promise<Array<{ type: ResourceType; resourceId: string; uuid: string }>> {
+  const staleMappings: Array<{
+    type: ResourceType;
+    resourceId: string;
+    uuid: string;
+  }> = [];
+
+  for (const type of getTargetedResourceTypes(resources)) {
+    const trackedResources = resources[type]
+      .map((resource) => ({
+        resourceId: resource.resourceId,
+        uuid: state[type][resource.resourceId],
+      }))
+      .filter(
+        (
+          entry,
+        ): entry is {
+          resourceId: string;
+          uuid: string;
+        } => typeof entry.uuid === "string",
+      );
+
+    if (trackedResources.length === 0) {
+      continue;
+    }
+
+    const remoteIds = new Set(
+      (await fetchAllResources(type)).map((resource) => resource.id),
+    );
+
+    for (const trackedResource of trackedResources) {
+      if (!remoteIds.has(trackedResource.uuid)) {
+        staleMappings.push({ type, ...trackedResource });
+      }
+    }
+  }
+
+  return staleMappings;
+}
+
+async function maybeBootstrapState(
+  resources: LoadedResources,
+  state: StateFile,
+): Promise<StateFile> {
+  if (!hasAnyLoadedResources(resources)) {
+    return state;
+  }
+
+  const targetedTypes = getTargetedResourceTypes(resources);
+  const missingCredentialNames = getMissingCredentialNames(resources, state);
+  const stateUninitialized =
+    Object.keys(state.credentials).length === 0 ||
+    targetedTypes.every((type) => Object.keys(state[type]).length === 0);
+  const staleMappings = await getStaleStateMappings(resources, state);
+
+  if (
+    !stateUninitialized &&
+    missingCredentialNames.length === 0 &&
+    staleMappings.length === 0
+  ) {
+    return state;
+  }
+
+  console.log("\n🧭 Bootstrap state sync required before apply.");
+  if (stateUninitialized) {
+    console.log(
+      "   - Local state is uninitialized for this environment or target resource set.",
+    );
+  }
+  if (missingCredentialNames.length > 0) {
+    console.log(
+      `   - Missing credential mappings: ${missingCredentialNames.join(", ")}`,
+    );
+  }
+  for (const mapping of staleMappings) {
+    console.log(
+      `   - Stale ${mapping.type} mapping: ${mapping.resourceId} -> ${mapping.uuid}`,
+    );
+  }
+
+  const result = await runPull({ bootstrap: true, typeFilter: [] });
+  return result.state;
 }
 
 // Recursively find any `credentialId` field whose value isn't a UUID
@@ -635,7 +779,7 @@ async function main(): Promise<void> {
   );
 
   // Load current state (needed for reference resolution even in partial apply)
-  const state = loadState();
+  let state = loadState();
 
   // Track what was applied for summary
   const applied: Record<ResourceType, number> = {
@@ -665,6 +809,19 @@ async function main(): Promise<void> {
     await loadResources<Record<string, unknown>>("simulations");
   const allSimulationSuitesRaw =
     await loadResources<Record<string, unknown>>("simulationSuites");
+
+  const loadedResources: LoadedResources = {
+    tools: allToolsRaw,
+    structuredOutputs: allStructuredOutputsRaw,
+    assistants: allAssistantsRaw,
+    squads: allSquadsRaw,
+    personalities: allPersonalitiesRaw,
+    scenarios: allScenariosRaw,
+    simulations: allSimulationsRaw,
+    simulationSuites: allSimulationSuitesRaw,
+  };
+
+  state = await maybeBootstrapState(loadedResources, state);
 
   // Resolve credential names → UUIDs in all resource data before applying
   const credMap = credentialForwardMap(state);
