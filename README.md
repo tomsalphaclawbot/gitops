@@ -133,6 +133,34 @@ This mode:
 
 If you skip this step, `push` will automatically run the same bootstrap sync when it detects empty or stale state for the resources being applied.
 
+#### Pulling A Single Resource By UUID
+
+If you know the remote Vapi UUID for a specific resource, you can pull just that resource by combining exactly one resource type with `--id`:
+
+```bash
+# Materialize one squad locally
+npm run pull:dev -- squads --id <squad-uuid>
+
+# Refresh state only for one assistant
+npm run pull:dev:bootstrap -- assistants --id <assistant-uuid>
+```
+
+Notes:
+
+- `--id` currently supports remote Vapi UUIDs only
+- `--id` must be paired with exactly one resource type such as `assistants`, `squads`, or `tools`
+- Single-resource pull updates only the targeted resource mappings and preserves the rest of the state file
+
+This will error if you do not provide exactly one resource type:
+
+```bash
+# Invalid: no resource type
+npm run pull:dev -- --id <uuid>
+
+# Invalid: more than one resource type
+npm run pull:dev -- assistants squads --id <uuid>
+```
+
 Promotion example:
 
 ```bash

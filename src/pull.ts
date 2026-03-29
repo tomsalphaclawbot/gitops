@@ -527,6 +527,7 @@ export interface PullOptions {
   force?: boolean;
   bootstrap?: boolean;
   typeFilter?: ResourceType[];
+  resourceIds?: string[];
 }
 
 export interface PullResult {
@@ -543,23 +544,45 @@ export async function pullResourceType(
     changedFiles?: Set<string>;
     force?: boolean;
     bootstrap?: boolean;
+    resourceIds?: string[];
   } = {},
 ): Promise<PullStats> {
-  const { changedFiles, force, bootstrap } = options;
+  const { changedFiles, force, bootstrap, resourceIds } = options;
   console.log(`\n📥 Pulling ${resourceType}...`);
 
-  const resources = (await fetchAllResources(resourceType)) ?? [];
+  const allResources = (await fetchAllResources(resourceType)) ?? [];
 
-  if (!Array.isArray(resources)) {
+  if (!Array.isArray(allResources)) {
     console.log(`   ⚠️  No ${resourceType} found (API returned non-array)`);
     return { created: 0, updated: 0, skipped: 0 };
   }
 
-  console.log(`   Found ${resources.length} ${resourceType} in Vapi`);
+  let resources = allResources;
+  if (resourceIds?.length) {
+    const requestedIds = new Set(resourceIds);
+    resources = allResources.filter((resource) =>
+      requestedIds.has(resource.id),
+    );
+    const foundIds = new Set(resources.map((resource) => resource.id));
+    const missingIds = resourceIds.filter((id) => !foundIds.has(id));
+
+    console.log(
+      `   Found ${resources.length} matching ${resourceType} in Vapi (requested ${resourceIds.length})`,
+    );
+    if (missingIds.length > 0) {
+      console.log(
+        `   ⚠️  Requested IDs not found for ${resourceType}: ${missingIds.join(", ")}`,
+      );
+    }
+  } else {
+    console.log(`   Found ${resources.length} ${resourceType} in Vapi`);
+  }
 
   const reverseMap = buildReverseMap(state, resourceType);
   const credReverse = credentialReverseMap(state);
-  const newStateSection: Record<string, string> = {};
+  const newStateSection: Record<string, string> = resourceIds?.length
+    ? { ...state[resourceType] }
+    : {};
 
   let created = 0;
   let updated = 0;
@@ -672,6 +695,15 @@ export async function runPull(options: PullOptions = {}): Promise<PullResult> {
   const force = options.force ?? process.argv.includes("--force");
   const bootstrap = options.bootstrap ?? BOOTSTRAP_SYNC;
   const typeFilter = options.typeFilter ?? APPLY_FILTER.resourceTypes;
+  const resourceIds = options.resourceIds ?? APPLY_FILTER.resourceIds;
+
+  if (resourceIds?.length) {
+    if (!typeFilter?.length || typeFilter.length !== 1) {
+      throw new Error(
+        "Single-resource pull requires exactly one resource type. Example: npm run pull:dev -- squads --id <uuid>",
+      );
+    }
+  }
 
   console.log(
     "═══════════════════════════════════════════════════════════════",
@@ -682,6 +714,9 @@ export async function runPull(options: PullOptions = {}): Promise<PullResult> {
   console.log(`   API: ${VAPI_BASE_URL}`);
   if (typeFilter?.length) {
     console.log(`   Filter: ${typeFilter.join(", ")}`);
+  }
+  if (resourceIds?.length) {
+    console.log(`   IDs: ${resourceIds.join(", ")}`);
   }
   if (bootstrap) {
     console.log(
@@ -749,48 +784,55 @@ export async function runPull(options: PullOptions = {}): Promise<PullResult> {
       changedFiles,
       force,
       bootstrap,
+      resourceIds,
     });
   if (shouldPull("assistants"))
     stats.assistants = await pullResourceType("assistants", state, {
       changedFiles,
       force,
       bootstrap,
+      resourceIds,
     });
   if (shouldPull("structuredOutputs"))
     stats.structuredOutputs = await pullResourceType(
       "structuredOutputs",
       state,
-      { changedFiles, force, bootstrap },
+      { changedFiles, force, bootstrap, resourceIds },
     );
   if (shouldPull("squads"))
     stats.squads = await pullResourceType("squads", state, {
       changedFiles,
       force,
       bootstrap,
+      resourceIds,
     });
   if (shouldPull("personalities"))
     stats.personalities = await pullResourceType("personalities", state, {
       changedFiles,
       force,
       bootstrap,
+      resourceIds,
     });
   if (shouldPull("scenarios"))
     stats.scenarios = await pullResourceType("scenarios", state, {
       changedFiles,
       force,
       bootstrap,
+      resourceIds,
     });
   if (shouldPull("simulations"))
     stats.simulations = await pullResourceType("simulations", state, {
       changedFiles,
       force,
       bootstrap,
+      resourceIds,
     });
   if (shouldPull("simulationSuites"))
     stats.simulationSuites = await pullResourceType("simulationSuites", state, {
       changedFiles,
       force,
       bootstrap,
+      resourceIds,
     });
 
   await saveState(state);

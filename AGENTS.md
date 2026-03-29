@@ -27,6 +27,7 @@ This project manages **Vapi voice agent configurations** as code. All resources 
 | Test webhook event delivery locally | Run `npm run mock:webhook` and tunnel with ngrok                              |
 | Push changes to Vapi                | `npm run push:dev` or `npm run push:prod`                                     |
 | Pull latest from Vapi               | `npm run pull:dev`, `npm run pull:dev:force`, or `npm run pull:dev:bootstrap` |
+| Pull one known remote resource      | `npm run pull:dev -- assistants --id <uuid>`                                  |
 | Push only one file                  | `npm run push:dev resources/dev/assistants/my-agent.md`                       |
 | Test a call                         | `npm run call:dev -- -a <assistant-name>`                                     |
 
@@ -704,6 +705,8 @@ Concrete example conversations showing expected behavior.
 npm run pull:dev              # Pull from Vapi (preserve local changes)
 npm run pull:dev:force        # Pull from Vapi (overwrite everything)
 npm run pull:dev:bootstrap    # Refresh state without writing remote resources locally
+npm run pull:dev -- squads --id <uuid>  # Pull one known remote resource by UUID
+# `--id` requires exactly one resource type; it will error if omitted or combined with multiple types
 npm run push:dev              # Push all local changes to Vapi
 npm run push:dev assistants   # Push only assistants
 npm run push:dev resources/dev/assistants/my-agent.md  # Push single file

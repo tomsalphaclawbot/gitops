@@ -11,6 +11,7 @@ import { VALID_ENVIRONMENTS, VALID_RESOURCE_TYPES } from "./types.ts";
 export interface ApplyFilter {
   resourceTypes?: ResourceType[]; // Filter by resource types
   filePaths?: string[]; // Apply only specific files
+  resourceIds?: string[]; // Pull only specific remote resource IDs
 }
 
 // Group aliases: expand a shorthand into multiple resource types
@@ -106,6 +107,8 @@ function parseFlags(): {
     result.applyFilter.resourceTypes = resolved;
   }
 
+  const resourceIds: string[] = [];
+
   // Parse file paths and positional resource types
   const filePaths: string[] = [];
   for (let i = 0; i < args.length; i++) {
@@ -115,10 +118,11 @@ function parseFlags(): {
     if (
       arg === "--force" ||
       arg === "--bootstrap" ||
+      arg === "--id" ||
       arg === "--type" ||
       arg === "-t"
     ) {
-      if (arg === "--type" || arg === "-t") i++; // skip the value too
+      if (arg === "--type" || arg === "-t" || arg === "--id") i++; // skip the value too
       continue;
     }
     // Check if it's a resource type or group (positional)
@@ -137,6 +141,18 @@ function parseFlags(): {
 
   if (filePaths.length > 0) {
     result.applyFilter.filePaths = filePaths;
+  }
+
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    if (arg === "--id" && args[i + 1]) {
+      resourceIds.push(args[i + 1]!);
+      i++;
+    }
+  }
+
+  if (resourceIds.length > 0) {
+    result.applyFilter.resourceIds = resourceIds;
   }
 
   return result;
