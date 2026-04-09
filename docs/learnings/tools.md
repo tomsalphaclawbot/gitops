@@ -99,6 +99,16 @@ Use the canonical names to avoid confusion.
 
 Liquid/Mustache templates work in `sipVerb`, `message`, and `twiml` fields, but intentionally **do not** run on `summaryPlan` content.
 
+### Missing `function.description` can make the LLM reluctant to transfer
+
+If you don't set an explicit `function.description` on a transferCall tool, the auto-generated description may include overly cautious language that biases the LLM toward not calling it. Always set `function.description` explicitly.
+
+### `sipVerb: "refer"` can silently fail with some providers
+
+If your SIP trunk or telephony provider doesn't support the REFER method, transfers will appear to initiate on the Vapi side (`endedReason: assistant-forwarded-call`) but the destination never rings. If you're seeing this, remove explicit `sipVerb: "refer"` from your `transferPlan` and let Vapi use the default mechanism.
+
+**See also:** [transfers.md](transfers.md) for a full diagnostic guide on transfer issues.
+
 ---
 
 ## endCall Tools

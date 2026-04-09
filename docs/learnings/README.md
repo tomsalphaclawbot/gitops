@@ -4,6 +4,10 @@ Non-obvious behaviors, silent defaults, and foot-guns in the Vapi platform that 
 
 Each file in this directory covers a specific resource type so you can load only the context you need:
 
+### Configuration Reference
+
+These files cover non-obvious defaults and behaviors for each resource type:
+
 | File | What it covers |
 |------|----------------|
 | [tools.md](tools.md) | apiRequest, function, transferCall, endCall, handoff, code tools; tool messages; strict mode |
@@ -13,4 +17,12 @@ Each file in this directory covers a specific resource type so you can load only
 | [simulations.md](simulations.md) | Personalities, evaluation comparators, chat-mode gotcha, missing references |
 | [webhooks.md](webhooks.md) | Default server messages, timeouts, unreachable servers, credential resolution, payload shape |
 
-**When to read these:** Before creating or modifying any resource file in `resources/<env>/`. These gotchas document behavior that the API reference and dashboard don't make obvious.
+### Troubleshooting Runbooks
+
+Step-by-step diagnostic guides for common problems:
+
+| File | What it covers |
+|------|----------------|
+| [transfers.md](transfers.md) | Transfers not working: LLM not calling tool, wrong tool type, telephony failures, transient assistant issues |
+
+**When to read these:** Before creating or modifying any resource file in `resources/<env>/`, and when diagnosing runtime issues with deployed assistants.
