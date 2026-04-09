@@ -52,3 +52,21 @@ For multimodal extraction (`messages-with-audio`), the default is **Gemini 2.5 P
 
 - `messages` (default): LLM analyzes the full message history JSON. The default prompt injects `{{messages}}`, `{{callEndedReason}}`, and `{{structuredOutput.schema}}`.
 - `messages-with-audio`: LLM analyzes both messages and the call recording. Requires `recordingUrl` to exist. If recording is disabled or unavailable, extraction fails with an error.
+
+---
+
+## Common KPI Patterns
+
+Structured outputs are the primary way to measure voice agent performance. Common schema patterns:
+
+| KPI | Schema type | Description |
+|-----|------------|-------------|
+| `call_successful` | `boolean` | Did the call achieve its primary goal? |
+| `appointment_booked` | `boolean` | Was an appointment scheduled? |
+| `caller_sentiment` | `enum: [positive, neutral, negative]` | Overall caller mood |
+| `escalation_reason` | `string` | Why the call was escalated, if applicable |
+| `topics_discussed` | `array of strings` | What subjects came up |
+| `call_success_rate` | Aggregated from `call_successful` | Percentage of calls achieving their goal |
+| `request_success_rate` | Aggregated per-request | Percentage of individual requests completed |
+
+**Tip:** Start with 2–3 boolean KPIs (`call_successful`, `appointment_booked`) before adding more complex extraction. Each additional field increases extraction cost and latency.

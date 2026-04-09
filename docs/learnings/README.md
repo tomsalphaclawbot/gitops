@@ -1,19 +1,42 @@
-# Gotchas & Best Practices
+# Learnings
 
-Non-obvious behaviors, silent defaults, and foot-guns in the Vapi platform that affect how your YAML/JSON resources behave at runtime. This is a companion to the API reference — it covers what the docs _don't_ tell you.
+Non-obvious behaviors, proven recipes, and troubleshooting guides for the Vapi platform. This is a companion to the API reference — it covers what the docs don't tell you.
 
-Each file in this directory covers a specific resource type so you can load only the context you need:
+Each file targets a specific topic so you can load only the context you need.
+
+---
+
+## Quick Routing: What are you working on?
+
+| If you're working on... | Read this |
+|------------------------|-----------|
+| Creating or editing an assistant | [assistants.md](assistants.md) |
+| Configuring tools (apiRequest, function, transferCall, handoff, code, endCall) | [tools.md](tools.md) |
+| Setting up a squad / multi-agent handoffs | [squads.md](squads.md) |
+| Transfers not working | [transfers.md](transfers.md) |
+| Structured outputs or post-call analysis | [structured-outputs.md](structured-outputs.md) |
+| Writing simulations or test suites | [simulations.md](simulations.md) |
+| Webhook / server configuration | [webhooks.md](webhooks.md) |
+| Making your agent faster | [latency.md](latency.md) |
+| Adding fallback providers (transcriber, voice, error hooks) | [fallbacks.md](fallbacks.md) |
+| Using your own Azure OpenAI credentials with regional failover | [azure-openai-fallback.md](azure-openai-fallback.md) |
+| Building a multilingual agent (English/Spanish, language switching) | [multilingual.md](multilingual.md) |
+| Streaming audio via WebSocket transport | [websocket.md](websocket.md) |
+
+---
+
+## Full Index
 
 ### Configuration Reference
 
-These files cover non-obvious defaults and behaviors for each resource type:
+Gotchas and silent defaults for each resource type:
 
 | File | What it covers |
 |------|----------------|
 | [tools.md](tools.md) | apiRequest, function, transferCall, endCall, handoff, code tools; tool messages; strict mode |
 | [assistants.md](assistants.md) | Model defaults, voice, transcriber, firstMessage, hooks, idle messages, endpointing, interruption, analysis, artifacts, background sound, server messages, HIPAA, tool resolution |
 | [squads.md](squads.md) | Name uniqueness, tools:append, assistantDestinations, handoff context, override merge order |
-| [structured-outputs.md](structured-outputs.md) | Schema type gotchas, assistant_ids, default models, target modes |
+| [structured-outputs.md](structured-outputs.md) | Schema type gotchas, assistant_ids, default models, target modes, KPI patterns |
 | [simulations.md](simulations.md) | Personalities, evaluation comparators, chat-mode gotcha, missing references |
 | [webhooks.md](webhooks.md) | Default server messages, timeouts, unreachable servers, credential resolution, payload shape |
 
@@ -25,4 +48,14 @@ Step-by-step diagnostic guides for common problems:
 |------|----------------|
 | [transfers.md](transfers.md) | Transfers not working: LLM not calling tool, wrong tool type, telephony failures, transient assistant issues |
 
-**When to read these:** Before creating or modifying any resource file in `resources/<env>/`, and when diagnosing runtime issues with deployed assistants.
+### Recipes & Guides
+
+Proven patterns and setup guides:
+
+| File | What it covers |
+|------|----------------|
+| [latency.md](latency.md) | Pipeline latency budget, quick-win matrix, iron triangle, model selection, prompt optimization, endpointing tuning |
+| [fallbacks.md](fallbacks.md) | Error-handling hooks, endedReason filters, transcriber/voice fallback chains, phone number fallback |
+| [azure-openai-fallback.md](azure-openai-fallback.md) | BYOK Azure OpenAI multi-region setup, credential isolation, region pinning, runtime failover behavior |
+| [multilingual.md](multilingual.md) | Three approaches to multilingual agents, provider recommendations, tool message patterns, common pitfalls |
+| [websocket.md](websocket.md) | Audio formats, timing rules, silence values, control messages, connection management, error codes |

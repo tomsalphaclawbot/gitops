@@ -44,9 +44,25 @@ When merging voice overrides in squads, `inputPunctuationBoundaries` arrays are 
 
 ## Transcriber Configuration
 
+### Provider recommendations by language
+
+| Language | Recommended Provider |
+|----------|---------------------|
+| English | Deepgram Nova-3 |
+| Spanish | Deepgram Nova-3 |
+| Portuguese | Azure Transcriber |
+
+For multilingual setups, see [multilingual.md](multilingual.md).
+
 ### `confidenceThreshold` defaults to 0.4
 
 If omitted, transcripts with confidence below 0.4 may be **ignored** entirely (not just flagged). This includes final transcripts, not just partials.
+
+### Use Smart Denoising (Krisp) for background noise
+
+[Smart Denoising (Krisp)](https://docs.vapi.ai/documentation/assistants/conversation-behavior/background-speech-denoising#smart-denoising-krisp) is recommended over [Fourier Denoising](https://docs.vapi.ai/documentation/assistants/conversation-behavior/background-speech-denoising#fourier-denoising-experimental) (experimental). Enable it via `backgroundDenoisingEnabled: true` or `smartDenoisingPlan.enabled: true`.
+
+Boost domain-specific vocabulary with [Custom Keywords](https://docs.vapi.ai/customization/custom-keywords) to improve recognition of brand names, product names, and industry terms.
 
 ### `smartEndpointingPlan` **owns** turn detection when set
 

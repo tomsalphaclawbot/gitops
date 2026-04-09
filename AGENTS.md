@@ -4,18 +4,32 @@ This project manages **Vapi voice agent configurations** as code. All resources 
 
 **You do NOT need to know how Vapi works internally.** This guide tells you everything you need to author and modify resources.
 
-**Prompt quality:** Whenever you create a new assistant or change an existing assistant’s system prompt, read `**docs/Vapi Prompt Optimization Guide.md`** first. It goes deeper on structure, voice constraints, tool usage, and evaluation than the summary in this file.
+**Prompt quality:** Whenever you create a new assistant or change an existing assistant’s system prompt, read **`docs/Vapi Prompt Optimization Guide.md`** first. It goes deeper on structure, voice constraints, tool usage, and evaluation than the summary in this file.
 
-**Environment-scoped resources:** Resources live in `resources/<env>/` (e.g. `resources/dev/`, `resources/prod/`). Each environment directory is isolated — `push:dev` only touches `resources/dev/`, `push:prod` only touches `resources/prod/`. See `**docs/environment-scoped-resources.md`** for the full promotion workflow and rationale.
+**Environment-scoped resources:** Resources live in `resources/<env>/` (e.g. `resources/dev/`, `resources/prod/`). Each environment directory is isolated — `push:dev` only touches `resources/dev/`, `push:prod` only touches `resources/prod/`. See **`docs/environment-scoped-resources.md`** for the full promotion workflow and rationale.
 
 **Template-safe first run:** In a fresh clone, prefer `npm run pull:dev:bootstrap` (or the matching env) to refresh `.vapi-state.<env>.json` and credential mappings without materializing the target org's resources into `resources/<env>/`. `push:<env>` will auto-run the same bootstrap sync when it detects empty or stale state for the resources being applied.
 
-**Gotchas & best practices:** Before configuring tools, assistants, squads, structured outputs, or simulations, consult the relevant file in `**docs/learnings/`**. Each file documents non-obvious backend behaviors, silent defaults, and common foot-guns for a specific resource type — things the API reference doesn't cover. See `**docs/learnings/README.md`** for the index.
+**Learnings & recipes:** Before configuring resources or debugging issues, read the relevant file in **`docs/learnings/`**. Load only what you need:
+
+| Working on | Read |
+|------------|------|
+| Assistants (model, voice, transcriber, hooks) | `docs/learnings/assistants.md` |
+| Tools (apiRequest, function, transferCall, handoff, code) | `docs/learnings/tools.md` |
+| Squads / multi-agent handoffs | `docs/learnings/squads.md` |
+| Transfers not working | `docs/learnings/transfers.md` |
+| Structured outputs / post-call analysis | `docs/learnings/structured-outputs.md` |
+| Simulations / test suites | `docs/learnings/simulations.md` |
+| Webhooks / server config | `docs/learnings/webhooks.md` |
+| Latency optimization | `docs/learnings/latency.md` |
+| Fallback providers / error hooks | `docs/learnings/fallbacks.md` |
+| Azure OpenAI BYOK with regional failover | `docs/learnings/azure-openai-fallback.md` |
+| Multilingual agents (English/Spanish) | `docs/learnings/multilingual.md` |
+| WebSocket audio streaming | `docs/learnings/websocket.md` |
 
 ---
 
 ## Quick Reference
-
 
 | I want to...                        | What to do                                                                    |
 | ----------------------------------- | ----------------------------------------------------------------------------- |
@@ -34,7 +48,6 @@ This project manages **Vapi voice agent configurations** as code. All resources 
 | Push only one file                  | `npm run push:dev resources/dev/assistants/my-agent.md`                       |
 | Test a call                         | `npm run call:dev -- -a <assistant-name>`                                     |
 
-
 ---
 
 ## Project Structure
@@ -44,14 +57,20 @@ docs/
 ├── Vapi Prompt Optimization Guide.md          # In-depth prompt authoring
 ├── environment-scoped-resources.md            # Environment isolation & promotion workflow
 ├── changelog.md                               # Template for tracking per-customer config changes
-└── learnings/                                 # Non-obvious backend behaviors & foot-guns
-    ├── README.md                              # Index of all learning docs
-    ├── tools.md                               # apiRequest, function, transferCall, endCall, handoff, code
-    ├── assistants.md                          # Model, voice, transcriber, hooks, endpointing, analysis
-    ├── squads.md                              # Name uniqueness, overrides, handoff context
-    ├── structured-outputs.md                  # Schema types, assistant_ids, extraction models
-    ├── simulations.md                         # Personalities, evaluations, chat-mode gotcha
-    └── webhooks.md                            # Server messages, timeouts, credentials, payloads
+└── learnings/                                 # Gotchas, recipes, and troubleshooting
+    ├── README.md                              # Task-routed index — start here
+    ├── tools.md                               # Tool configuration gotchas
+    ├── assistants.md                          # Assistant configuration gotchas
+    ├── squads.md                              # Squad and multi-agent gotchas
+    ├── structured-outputs.md                  # Structured output gotchas + KPI patterns
+    ├── simulations.md                         # Simulation and testing gotchas
+    ├── webhooks.md                            # Server and webhook gotchas
+    ├── transfers.md                           # Transfer troubleshooting runbook
+    ├── latency.md                             # Latency optimization guide
+    ├── fallbacks.md                           # Fallback and error handling recipes
+    ├── azure-openai-fallback.md               # Azure OpenAI BYOK multi-region setup
+    ├── multilingual.md                        # Multilingual agent architecture guide
+    └── websocket.md                           # WebSocket transport rules
 
 resources/
 ├── dev/                     # Dev environment resources (push:dev reads here)
@@ -131,7 +150,6 @@ You are a virtual assistant for the business you represent...
 
 #### Key Assistant Settings
 
-
 | Setting                      | Purpose                                            | Common Values                                                                                                                     |
 | ---------------------------- | -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
 | `name`                       | Display name in Vapi dashboard                     | Any string                                                                                                                        |
@@ -157,7 +175,6 @@ You are a virtual assistant for the business you represent...
 | `artifactPlan`               | What to save after calls                           | See below                                                                                                                         |
 | `observabilityPlan`          | Logging/monitoring                                 | `{ provider: "langfuse", tags: [...] }`                                                                                           |
 | `compliancePlan`             | HIPAA/PCI compliance                               | `{ hipaaEnabled: false, pciEnabled: false }`                                                                                      |
-
 
 #### Voice Configuration
 
@@ -377,14 +394,12 @@ function:
 
 #### Tool Message Types
 
-
 | Type                       | Purpose                     | Key Properties                                          |
 | -------------------------- | --------------------------- | ------------------------------------------------------- |
 | `request-start`            | Said when tool is called    | `content`, `blocking` (pause speech until tool returns) |
 | `request-response-delayed` | Said if tool takes too long | `content`, `timingMilliseconds`                         |
 | `request-complete`         | Said when tool returns      | `content`                                               |
 | `request-failed`           | Said when tool errors       | `content`                                               |
-
 
 ---
 
@@ -466,7 +481,7 @@ schema:
 - `assistant_ids` uses **Vapi UUIDs** (not local filenames) — these are the IDs of assistants this output applies to
 - `target: messages` means the LLM analyzes the full message history
 - `type: ai` means an LLM generates the output (vs. `type: code` for programmatic)
-- `**schema.type` must be a simple string** (e.g. `type: string`, `type: boolean`, `type: object`). Do NOT use a YAML array like `type: [string, "null"]` — the Vapi dashboard calls `.toLowerCase()` on this field and will crash with `TypeError: .toLowerCase is not a function` if it receives an array. For nullable values, express nullability in the `description` instead (e.g. "Return null if no follow-up is needed")
+- **`schema.type` must be a simple string** (e.g. `type: string`, `type: boolean`, `type: object`). Do NOT use a YAML array like `type: [string, "null"]` — the Vapi dashboard calls `.toLowerCase()` on this field and will crash with `TypeError: .toLowerCase is not a function` if it receives an array. For nullable values, express nullability in the `description` instead (e.g. "Return null if no follow-up is needed")
 
 ---
 
@@ -623,7 +638,6 @@ simulationIds:
 
 Resources reference each other by **filename without extension**:
 
-
 | From          | Field                                | References              | Example                                   |
 | ------------- | ------------------------------------ | ----------------------- | ----------------------------------------- |
 | Assistant     | `model.toolIds[]`                    | Tool files              | `- end-call-tool`                         |
@@ -634,7 +648,6 @@ Resources reference each other by **filename without extension**:
 | Simulation    | `scenarioId`                         | Scenario files          | `scenarioId: happy-path-booking-a0000002` |
 | Suite         | `simulationIds[]`                    | Simulation test files   | `- booking-test-1-a0000001`               |
 
-
 The gitops engine resolves these local filenames to Vapi UUIDs automatically during push.
 
 ---
@@ -643,7 +656,7 @@ The gitops engine resolves these local filenames to Vapi UUIDs automatically dur
 
 The markdown body of an assistant `.md` file is the system prompt — the core instructions that define how the AI behaves on a call. This is the most important part to get right.
 
-**Before drafting or changing prompts:** work through `**docs/Vapi Prompt Optimization Guide.md`** so structure, guardrails, and voice-specific habits stay consistent across agents.
+**Before drafting or changing prompts:** work through **`docs/Vapi Prompt Optimization Guide.md`** so structure, guardrails, and voice-specific habits stay consistent across agents.
 
 ### Recommended Structure
 
@@ -746,28 +759,26 @@ Replace `dev` with `prod` for production environment.
 
 For the **complete schema** of all available properties on each resource type, consult the Vapi API documentation:
 
-
-| Resource           | API Docs                                                                                                                                                                               |
-| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Assistants         | [https://docs.vapi.ai/api-reference/assistants/create](https://docs.vapi.ai/api-reference/assistants/create)                                                                           |
-| Tools              | [https://docs.vapi.ai/api-reference/tools/create](https://docs.vapi.ai/api-reference/tools/create)                                                                                     |
-| Squads             | [https://docs.vapi.ai/api-reference/squads/create](https://docs.vapi.ai/api-reference/squads/create)                                                                                   |
-| Structured Outputs | [https://docs.vapi.ai/api-reference/structured-outputs/structured-output-controller-create](https://docs.vapi.ai/api-reference/structured-outputs/structured-output-controller-create) |
-| Simulations        | [https://docs.vapi.ai/api-reference/simulations](https://docs.vapi.ai/api-reference/simulations)                                                                                       |
-
+| Resource           | API Docs                                                                                  |
+| ------------------ | ----------------------------------------------------------------------------------------- |
+| Assistants         | https://docs.vapi.ai/api-reference/assistants/create                                      |
+| Tools              | https://docs.vapi.ai/api-reference/tools/create                                           |
+| Squads             | https://docs.vapi.ai/api-reference/squads/create                                          |
+| Structured Outputs | https://docs.vapi.ai/api-reference/structured-outputs/structured-output-controller-create |
+| Simulations        | https://docs.vapi.ai/api-reference/simulations                                            |
 
 **For voice/model/transcriber provider options:**
 
-- Voice providers: [https://docs.vapi.ai/providers/voice](https://docs.vapi.ai/providers/voice)
-- Model providers: [https://docs.vapi.ai/providers/model](https://docs.vapi.ai/providers/model)
-- Transcriber providers: [https://docs.vapi.ai/providers/transcriber](https://docs.vapi.ai/providers/transcriber)
+- Voice providers: https://docs.vapi.ai/providers/voice
+- Model providers: https://docs.vapi.ai/providers/model
+- Transcriber providers: https://docs.vapi.ai/providers/transcriber
 
 **For feature-specific documentation:**
 
-- Hooks: [https://docs.vapi.ai/assistants/hooks](https://docs.vapi.ai/assistants/hooks)
-- Tools: [https://docs.vapi.ai/tools](https://docs.vapi.ai/tools)
-- Squads: [https://docs.vapi.ai/squads](https://docs.vapi.ai/squads)
-- Workflows: [https://docs.vapi.ai/workflows](https://docs.vapi.ai/workflows)
+- Hooks: https://docs.vapi.ai/assistants/hooks
+- Tools: https://docs.vapi.ai/tools
+- Squads: https://docs.vapi.ai/squads
+- Workflows: https://docs.vapi.ai/workflows
 
 > **Tip:** The Vapi MCP server and API reference pages provide full JSON schemas with all available fields, enums, and defaults. Use them to discover settings not covered in this guide.
 
@@ -828,4 +839,3 @@ If you need a local mock server to validate webhook payloads or message delivery
 - Assume decryption only works when the corresponding private keys are already available in your zsh environment.
 - For local webhook validation, prioritize core `serverMessages` event types such as `speech-update`, `status-update`, and `end-of-call-report`.
 - To test callbacks from Vapi into your local machine, expose the mock server with a tunnel like `ngrok` and use that public HTTPS URL in `assistant.server.url`.
-
