@@ -1,0 +1,55 @@
+name: Greenfield Property Management
+members:
+  - assistantId: maintenance-agent
+    assistantOverrides:
+      tools:append:
+        - type: handoff
+          async: false
+          messages: []
+          function:
+            name: handoff_to_FAQ_Agent
+            description: >
+              Transfer the caller to the FAQ Agent when they have a general
+              question about property policies, rent, parking, pets, or
+              other non-maintenance topics.
+            parameters:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  description: Brief reason for the handoff
+              required:
+                - reason
+          destinations:
+            - type: assistant
+              assistantName: FAQ Agent
+              description: >
+                Handles general tenant questions about policies, rent,
+                parking, and other property topics
+
+  - assistantId: faq-agent
+    assistantOverrides:
+      tools:append:
+        - type: handoff
+          async: false
+          messages: []
+          function:
+            name: handoff_to_Maintenance_Agent
+            description: >
+              Transfer the caller to the Maintenance Agent when they
+              describe a maintenance issue like something broken, leaking,
+              or not working in their unit.
+            parameters:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  description: Brief reason for the handoff
+              required:
+                - reason
+          destinations:
+            - type: assistant
+              assistantName: Maintenance Agent
+              description: >
+                Handles tenant maintenance requests, collects details
+                and logs tickets

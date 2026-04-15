@@ -1,0 +1,39 @@
+type: function
+async: false
+function:
+  name: log_maintenance_request
+  description: Log a tenant maintenance request with their name, unit number, issue description, and urgency level.
+  strict: true
+  parameters:
+    type: object
+    properties:
+      tenant_name:
+        type: string
+        description: The full name of the tenant reporting the issue
+      unit_number:
+        type: string
+        description: "The tenant's unit number (e.g., 4B, 12A)"
+      issue_description:
+        type: string
+        description: A description of the maintenance issue
+      urgency:
+        type: string
+        enum: [low, medium, high, emergency]
+        description: "The urgency level: low (cosmetic), medium (inconvenient but functional), high (affecting daily life), emergency (flood, no heat, safety hazard)"
+    required:
+      - tenant_name
+      - unit_number
+      - issue_description
+      - urgency
+messages:
+  - type: request-start
+    blocking: true
+    content: "One moment while I log that for you."
+  - type: request-response-delayed
+    timingMilliseconds: 5000
+    content: "Still logging that, just a moment."
+  - type: request-failed
+    content: "I'm sorry, I wasn't able to log that right now. Our team will follow up with you."
+server:
+  url: https://webhook.site
+  timeoutSeconds: 20
