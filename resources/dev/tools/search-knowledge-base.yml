@@ -1,0 +1,26 @@
+type: function
+async: false
+function:
+  name: search_knowledge_base
+  description: Search the Greenfield Property Management knowledge base to answer tenant questions about rent, policies, parking, pets, and other general topics.
+  strict: true
+  parameters:
+    type: object
+    properties:
+      query:
+        type: string
+        description: "The search query based on the tenant's question (e.g., pet policy, rent due date, parking rules)"
+    required:
+      - query
+messages:
+  - type: request-start
+    blocking: true
+    content: "Let me look that up for you."
+  - type: request-response-delayed
+    timingMilliseconds: 5000
+    content: "Still searching, one moment."
+  - type: request-failed
+    content: "I'm having trouble looking that up right now. You can try our website or call the office directly."
+server:
+  url: https://your-username-your-val-name.web.val.run/search
+  timeoutSeconds: 20

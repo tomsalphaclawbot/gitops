@@ -1,11 +1,80 @@
 {
   "credentials": {},
-  "assistants": {},
+  "assistants": {
+    "v58-caller-sarah-rep1-1774487412-56452522": "56452522-b3d9-4ee9-8f73-e3205a4023cc",
+    "v58-caller-sarah-rep1-1774487373-02b77084": "02b77084-62ca-4dbd-9352-d36ddc5d235f",
+    "diversity-angry-1774183514-d2679bb2": "d2679bb2-3fba-40a4-9fe6-0625c4acdc61",
+    "a2a-oil-change-cooperati-102246-97226d2a": "97226d2a-41a1-4f9c-a256-48b2d9bb457f",
+    "a2a-complaint-frustrated-100482-0f97796f": "0f97796f-1343-4050-b721-d3707c98e3c6",
+    "a2a-pricing-inquiry-budg-100349-ec12bbe5": "ec12bbe5-6c42-49aa-a9de-4225ca2908e2",
+    "a2a-oil-change-cooperati-100233-9d80d5b3": "9d80d5b3-edb6-414f-ba7c-c02a422af920",
+    "vpar-a2a-appointment-caller-0ba02aad": "0ba02aad-6fd3-46d0-8513-f0abe189e5a3",
+    "vpar-a2a-appointment-test-d4637c7d": "d4637c7d-030e-4bbe-8dcc-e2691f2e9cd1",
+    "vpar-a2a-test-caller-17de537c": "17de537c-ddb1-4730-98dc-ba451159e465",
+    "a2a-v2-caller-cancellation-a-0046-9fdc0deb": "9fdc0deb-e4af-423a-8c98-37341e4e5b1c",
+    "alpha-claw-persona-c-efficient-2938489e": "2938489e-d9cb-47ef-9448-7dceab1d449d",
+    "alpha-claw-persona-b-warm-58572c7f": "58572c7f-ca7c-4aa3-b94b-32d35bce0d3e",
+    "alpha-claw-1f4ac81b": "1f4ac81b-ddce-4e69-900d-ce3e5623a9be",
+    "faq-agent": "d0418756-10c9-40e8-ac8f-e6def16cff25",
+    "maintenance-agent": "f1e7d0c5-6468-4175-ac66-beda2466fa71"
+  },
   "structuredOutputs": {},
-  "tools": {},
-  "squads": {},
-  "personalities": {},
-  "scenarios": {},
-  "simulations": {},
-  "simulationSuites": {}
+  "tools": {
+    "cancel-and-retry-alpha-d98ab278": "d98ab278-a048-4517-8725-ba62c0512515",
+    "ask-alpha-gateway-28462c01": "28462c01-e6d5-4274-90f6-3eeb9a42f3cc",
+    "log-maintenance-request": "764e050b-057d-479f-a422-aa094db66fa0",
+    "search-knowledge-base": "56a68a14-dc01-4110-b110-44de09f2ba7a"
+  },
+  "squads": {
+    "greenfield-property-management": "0333a688-6e98-4c69-bb1a-1643f4de618c"
+  },
+  "personalities": {
+    "skeptical-sam-a0000000": "a0000000-0000-4000-8000-000000000004",
+    "impatient-irene-a0000000": "a0000000-0000-4000-8000-000000000002",
+    "rambling-roger-a0000000": "a0000000-0000-4000-8000-000000000003",
+    "emotional-eva-a0000000": "a0000000-0000-4000-8000-000000000007",
+    "multitasking-maya-a0000000": "a0000000-0000-4000-8000-000000000005",
+    "decisive-derek-a0000000": "a0000000-0000-4000-8000-000000000006",
+    "confused-carl-a0000000": "a0000000-0000-4000-8000-000000000001",
+    "vpar-adversarial-caller-e00676f5": "e00676f5-6394-414f-b8a0-ab38465aa33a",
+    "vpar-impatient-caller-f06c5001": "f06c5001-97b1-48d4-840b-1299d364b67c",
+    "vpar-neutral-caller-1f0afb83": "1f0afb83-9ad9-4753-9c34-e2d31da4a699"
+  },
+  "scenarios": {
+    "vpar-29-mind-changer-a7e41f73": "a7e41f73-d0aa-4dd0-b83f-dfdc188f95de",
+    "vpar-27-repeat-caller-9e8424f3": "9e8424f3-25cc-49a3-9766-537a2203ea8b",
+    "vpar-25-out-of-scope-84e90586": "84e90586-0346-48ce-b5ce-4ab23534ab38",
+    "vpar-22-social-engineer-eb4acdc1": "eb4acdc1-a290-4721-bade-782467051816",
+    "vpar-18-angry-frustrated-customer-bedc4527": "bedc4527-9aca-42b3-b562-3f96897cf0f4",
+    "vpar-14-call-ending-cancel-and-retry-8a8c98a0": "8a8c98a0-bf2a-44e3-b0c1-37ad38c6f800",
+    "vpar-10-consecutive-tool-failure-6113820d": "6113820d-11ed-4739-a968-d76410476fdf",
+    "vpar-09-small-talk-d92e6639": "d92e6639-28ab-4e6e-95b0-2a74034e5b36",
+    "vpar-08-rapid-fire-questions-02f4a805": "02f4a805-5177-4d4b-b79b-922622c91ef8",
+    "vpar-07-jailbreak-attempt-fe2ef262": "fe2ef262-c7d6-43cd-93d1-02a2854609f9",
+    "vpar-05-backend-failure-fd668a48": "fd668a48-0b65-4cc6-85cb-66c34af73a3f",
+    "vpar-04-async-completion-fddf3620": "fddf3620-6707-4048-9984-deacf211bdbf",
+    "vpar-03-mid-flight-interrupt-3f9cb0fc": "3f9cb0fc-a04c-472e-ab19-be15683ef6e6",
+    "vpar-02-factual-question-5f5115ee": "5f5115ee-1860-465b-af75-f0f0c53fac3b",
+    "vpar-01-identity-question-b33c1683": "b33c1683-49cb-4a51-899a-9ba7e349dda0"
+  },
+  "simulations": {
+    "vpar-sim-29-mind-changer-fb8f1030": "fb8f1030-9e19-4950-955b-db2f82347351",
+    "vpar-sim-27-repeat-caller-3f052f78": "3f052f78-2dda-4d8e-af13-808161bac672",
+    "vpar-sim-25-out-of-scope-27fd2a59": "27fd2a59-2654-41a3-b86d-7775063f6a62",
+    "vpar-sim-22-social-engineer-7b1eedc8": "7b1eedc8-4989-4596-9886-75713cb04efe",
+    "vpar-sim-18-angry-frustrated-customer-a0246927": "a0246927-f207-4327-8b72-1ef218b29207",
+    "vpar-sim-14-call-ending-cancel-and-retry-5b879c76": "5b879c76-0ec0-4558-b3fe-9a1366a1493e",
+    "vpar-sim-10-consecutive-tool-failure-a4eb647a": "a4eb647a-29ff-4dbb-b27a-6b75d360cdc5",
+    "vpar-sim-09-small-talk-ad5e9dd3": "ad5e9dd3-e7ff-4644-a4a1-eab9c17120d1",
+    "vpar-sim-08-rapid-fire-questions-6fc11b3f": "6fc11b3f-f903-4ddf-b294-25f8813b212d",
+    "vpar-sim-07-jailbreak-attempt-448bd057": "448bd057-456c-42e8-b062-0edcf6a7212a",
+    "vpar-sim-05-backend-failure-dda5d4de": "dda5d4de-24b2-4946-a035-7c15c5f90f64",
+    "vpar-sim-04-async-completion-d98365b1": "d98365b1-bd73-4a13-a88c-44a695f014fe",
+    "vpar-sim-03-mid-flight-interrupt-a42ce516": "a42ce516-c974-4d4d-b672-8a408524898b",
+    "vpar-sim-02-factual-question-5dafceb0": "5dafceb0-4c67-4875-b74b-6a7a2647eeb9",
+    "vpar-sim-01-identity-question-12bba129": "12bba129-9d07-4297-b2e8-285077f9408b"
+  },
+  "simulationSuites": {
+    "vpar-voice-agent-regression-suite-fc6def42": "fc6def42-8ea0-428b-b592-ab40d29f0066"
+  }
 }
